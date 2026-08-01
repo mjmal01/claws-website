@@ -1,7 +1,21 @@
 {
   "projectId": "0a4e2cd9-066a-44ff-9de5-fc11d59cde00",
-  "shape": "package",
-  "componentSrcMap": {
-    "include": ["components/ui/**/*.tsx"]
+  "shape": "storybook",
+  "storybookStatic": ".design-sync/sb-reference",
+  "pkg": "claws-website",
+  "srcDir": ".",
+  "tsconfig": "tsconfig.json",
+  "readmeHeader": ".design-sync/conventions.md",
+  "cssEntry": ".design-sync/dist/tailwind.css",
+  "extraEntries": ["./.design-sync/process-shim.ts", "./.design-sync/nav-provider.tsx"],
+  "provider": { "component": "NavProvider", "props": { "pathname": "/" } },
+  "storyImports": {
+    "shim": ["nav-provider"]
+  },
+  "overrides": {
+    "Modal": { "cardMode": "single", "primaryStory": "Default" },
+    "Navbar": { "cardMode": "single", "primaryStory": "AboutActive" },
+    "PortalNav": { "cardMode": "single", "primaryStory": "LeadershipWithManage" },
+    "ActivityGrid": { "cardMode": "column" }
   }
 }

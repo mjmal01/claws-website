@@ -46,3 +46,8 @@ next-env.d.ts
 .design-sync/.cache/
 .design-sync/learnings/
 .design-sync/node_modules
+.design-sync/dist/
+.design-sync/sb-reference/
+
+*storybook.log
+storybook-static

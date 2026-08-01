@@ -1,0 +1,51 @@
+/* Authored, not generated. Next's font loaders (next/font/local, next/font/google)
+   inject these @font-face rules and CSS custom properties into <html> at Next's own
+   build time — invisible to design-sync's standalone `tailwindcss` CLI compile of
+   cssEntry. This mirrors that output using the same real font files the app ships
+   (vendored into .design-sync/fonts/ from app/fonts/ and Next's font cache), so
+   previews get the real CLAWS typeface instead of a system-font substitute.
+   Regenerate app/fonts/ copies + re-vendor Space Grotesk if either font changes. */
+
+@font-face {
+  font-family: 'Geist Sans';
+  src: url('../fonts/GeistVF.woff') format('woff');
+  font-weight: 100 900;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'Geist Mono';
+  src: url('../fonts/GeistMonoVF.woff') format('woff');
+  font-weight: 100 900;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'Space Grotesk';
+  src: url('../fonts/32687112bd2dd8db-s.1gepa_7fcx9fm.woff2') format('woff2');
+  font-weight: 300 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Space Grotesk';
+  src: url('../fonts/28868e710e86be81-s.2eksvhm1z0jwa.woff2') format('woff2');
+  font-weight: 300 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Space Grotesk';
+  src: url('../fonts/0c89a48fa5027cee-s.p.2cyn07wtgehh0.woff2') format('woff2');
+  font-weight: 300 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+:root {
+  --font-geist-sans: 'Geist Sans', system-ui, sans-serif;
+  --font-geist-mono: 'Geist Mono', monospace;
+  --font-space-grotesk: 'Space Grotesk', system-ui, sans-serif;
+}
