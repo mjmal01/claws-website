@@ -1,0 +1,24 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "Next.js Dev Server",
+      "runtimeExecutable": "/opt/homebrew/Cellar/node/25.8.1_1/bin/node",
+      "runtimeArgs": ["--no-deprecation", "/Users/mjmal/Documents/claws-website/node_modules/next/dist/bin/next", "dev", "-p", "3001"],
+      "port": 3001,
+      "autoPort": false
+    },
+    {
+      "name": "CLAWS Formal — Midnight Eclipse",
+      "runtimeExecutable": "/opt/homebrew/Cellar/node/25.8.1_1/bin/node",
+      "runtimeArgs": ["/Users/mjmal/Documents/claws-formal/server.js"],
+      "port": 3000
+    },
+    {
+      "name": "Supabase Local Stack",
+      "runtimeExecutable": "supabase",
+      "runtimeArgs": ["start"],
+      "port": 54321
+    }
+  ]
+}
