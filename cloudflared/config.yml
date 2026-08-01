@@ -1,0 +1,20 @@
+# Template only — not registered or run yet. UMich ITS is piloting the
+# Cloudflare-through-ITS deployment pattern on a different site first
+# (spaceagora, aerospace domain); this is ready to fill in once claws-website
+# is next in line.
+#
+# Fill in once a tunnel + hostname exist:
+#   tunnel: <tunnel-UUID-from-ITS>
+#   credentials-file: /etc/cloudflared/<tunnel-UUID>.json
+#
+# Then:
+#   cloudflared tunnel run <tunnel-name>
+#   (or install as a system service: cloudflared service install)
+
+tunnel: REPLACE_WITH_TUNNEL_ID
+credentials-file: REPLACE_WITH_CREDENTIALS_FILE_PATH
+
+ingress:
+  - hostname: REPLACE_WITH_ASSIGNED_HOSTNAME
+    service: http://localhost:3001
+  - service: http_status:404

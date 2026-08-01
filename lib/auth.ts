@@ -1,5 +1,6 @@
 import type { NextAuthOptions } from 'next-auth'
 import GoogleProvider from 'next-auth/providers/google'
+import { SignJWT } from 'jose'
 import { createServerSupabaseClient, createAdminSupabaseClient } from './supabase'
 import type { MemberRole } from './supabase'
 
@@ -13,6 +14,7 @@ declare module 'next-auth' {
       role: MemberRole
       subteam: string | null
     }
+    supabaseAccessToken: string
   }
 }
 
@@ -21,7 +23,23 @@ declare module 'next-auth/jwt' {
     id: string
     role: MemberRole
     subteam: string | null
+    supabaseAccessToken: string
   }
+}
+
+// Mints a short-lived Supabase-compatible access token from the NextAuth
+// session so RLS's auth.uid() resolves for the browser client (realtime +
+// storage uploads). We don't use Supabase Auth at all — this signs against
+// the project's own JWT secret so Postgres accepts it as if Supabase Auth
+// had issued it.
+async function mintSupabaseAccessToken(memberId: string, email: string): Promise<string> {
+  const secret = new TextEncoder().encode(process.env.SUPABASE_JWT_SECRET!)
+  return new SignJWT({ role: 'authenticated', email })
+    .setProtectedHeader({ alg: 'HS256' })
+    .setSubject(memberId)
+    .setIssuedAt()
+    .setExpirationTime('1h')
+    .sign(secret)
 }
 
 export const authOptions: NextAuthOptions = {
@@ -71,6 +89,12 @@ export const authOptions: NextAuthOptions = {
           token.subteam = row.subteam
         }
       }
+      // Re-minted on every session read (cheap, no I/O) so the 1h Supabase
+      // token never goes stale while the longer-lived NextAuth session cookie
+      // is still valid.
+      if (token.id) {
+        token.supabaseAccessToken = await mintSupabaseAccessToken(token.id, token.email ?? '')
+      }
       return token
     },
 
@@ -78,6 +102,7 @@ export const authOptions: NextAuthOptions = {
       session.user.id = token.id
       session.user.role = token.role
       session.user.subteam = token.subteam
+      session.supabaseAccessToken = token.supabaseAccessToken
       return session
     },
   },

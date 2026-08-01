@@ -22,7 +22,7 @@ Contact: claws-admin@umich.edu
 - Framer Motion — animations, page transitions, badge unlocks
 - NextAuth.js — Google OAuth, restricted to @umich.edu
 - Supabase — Postgres DB + Storage + Row Level Security
-- Vercel — deployment target
+- Self-hosted (pm2 + Cloudflare Tunnel via UMich ITS) — deployment target
 - qrcode — QR code generation
 - html5-qrcode — QR scanning on mobile
 - Slack Web API — post to channels, send DMs
@@ -890,17 +890,22 @@ spotlights
 ---
 
 ## Local Development
-npx supabase init
-npx supabase start
-  DB:     localhost:54321
-  Studio: localhost:54323
 npm run dev
-  Site:   localhost:3000
+  Site: localhost:3001 (3000 is reserved for the separate claws-formal
+  event app — see .claude/launch.json)
+
+Dev points at the hosted Supabase project (CLAWS_UM org), not a local
+Docker stack — there is no `supabase start` step in the normal flow.
 
 .env.local
-NEXT_PUBLIC_SUPABASE_URL=http://localhost:54321
+NEXT_PUBLIC_SUPABASE_URL=
 NEXT_PUBLIC_SUPABASE_ANON_KEY=
-NEXTAUTH_URL=http://localhost:3000
+SUPABASE_SERVICE_ROLE_KEY=       # server-only, bypasses RLS — never expose to the browser
+SUPABASE_JWT_SECRET=             # Project Settings -> API -> JWT Settings -> Legacy JWT Secret
+                                  # mints the Supabase-compatible token from the NextAuth
+                                  # session (lib/auth.ts) so RLS's auth.uid() resolves for
+                                  # the browser client (realtime + storage uploads)
+NEXTAUTH_URL=http://localhost:3001
 NEXTAUTH_SECRET=
 GOOGLE_CLIENT_ID=
 GOOGLE_CLIENT_SECRET=
@@ -909,8 +914,10 @@ GOOGLE_CALENDAR_CLIENT_ID=
 GOOGLE_CALENDAR_CLIENT_SECRET=
 
 ## Deploy
-npx supabase db push
-git push → Vercel auto-deploys
+Self-hosted via Cloudflare Tunnel through UMich ITS (not Vercel). Production
+build (`npm run build && npm run start`) kept alive via pm2; tunnel ingress
+points at the local port. DNS/tunnel registration is coordinated with UMich
+ITS — see ecosystem.config.js and cloudflared/config.yml once set up.
 
 ---
 

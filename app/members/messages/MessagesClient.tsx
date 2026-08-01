@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef, useCallback } from 'react'
+import { useSession } from 'next-auth/react'
 import { Avatar } from '@/components/ui/Avatar'
 import { createBrowserSupabaseClient } from '@/lib/supabase'
 import type {
@@ -282,6 +283,8 @@ export function MessagesClient({
   defaultChannelId,
   initialMessages,
 }: MessagesClientProps) {
+  const { data: session } = useSession()
+
   // Build a members map for realtime lookups
   const membersMap = useRef<Map<string, Pick<Member, 'id' | 'name' | 'avatar_url' | 'subteam'>>>(
     new Map(allMembers.map((m) => [m.id, { id: m.id, name: m.name, avatar_url: m.avatar_url, subteam: m.subteam }]))
@@ -313,7 +316,13 @@ export function MessagesClient({
 
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
-  const supabaseRef = useRef(createBrowserSupabaseClient())
+
+  // Held for the component's whole lifetime — the getter reads this ref so
+  // the client keeps working as the session's 1h Supabase token re-mints,
+  // without tearing down/recreating realtime subscriptions.
+  const tokenRef = useRef(session?.supabaseAccessToken ?? null)
+  useEffect(() => { tokenRef.current = session?.supabaseAccessToken ?? null }, [session?.supabaseAccessToken])
+  const supabaseRef = useRef(createBrowserSupabaseClient(async () => tokenRef.current))
 
   // Request browser notification permission once on mount
   useEffect(() => {

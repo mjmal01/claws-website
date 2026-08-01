@@ -213,10 +213,23 @@ export interface TaskWithAssigner extends Task {
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type AnyClient = SupabaseClient<any, any, any>
 
-export function createBrowserSupabaseClient(): AnyClient {
+// accessToken is the Supabase-compatible JWT minted from the NextAuth
+// session (session.supabaseAccessToken in lib/auth.ts) — required for RLS's
+// auth.uid() to resolve on this client. Omitting it produces an anon-only
+// connection that every auth.uid()-scoped RLS policy silently rejects.
+//
+// Accepts either a plain token (fine for a client created fresh per render/
+// effect) or a getter function (for a client held across a component's whole
+// lifetime via useRef — the getter can read a ref that's kept fresh as the
+// session's 1h token re-mints, without recreating the client/subscriptions).
+export function createBrowserSupabaseClient(
+  accessToken?: string | (() => Promise<string | null>)
+): AnyClient {
+  const getToken = typeof accessToken === 'function' ? accessToken : async () => accessToken ?? null
   return createBrowserClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    accessToken ? { accessToken: getToken } : undefined
   )
 }
 

@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useTransition, useEffect } from 'react'
+import { useSession } from 'next-auth/react'
 import type { TaskWithAssigner } from '@/lib/supabase'
 import { completeTask, uncompleteTask } from '@/app/actions/tasks'
 import { createBrowserSupabaseClient } from '@/lib/supabase'
@@ -34,6 +35,7 @@ interface Props {
 }
 
 export default function TaskListClient({ tasks: initialTasks }: Props) {
+  const { data: session } = useSession()
   const [tasks, setTasks] = useState<TaskWithAssigner[]>(initialTasks)
   const [filter, setFilter]   = useState<Filter>('all')
   const [expanded, setExpanded] = useState<Set<string>>(new Set())
@@ -43,7 +45,8 @@ export default function TaskListClient({ tasks: initialTasks }: Props) {
 
   // Realtime: listen for new task assignments and updates
   useEffect(() => {
-    const supabase = createBrowserSupabaseClient()
+    if (!session?.supabaseAccessToken) return
+    const supabase = createBrowserSupabaseClient(session.supabaseAccessToken)
     const channel = supabase
       .channel('tasks_realtime')
       .on(
@@ -79,7 +82,7 @@ export default function TaskListClient({ tasks: initialTasks }: Props) {
       )
       .subscribe()
     return () => { supabase.removeChannel(channel) }
-  }, [])
+  }, [session?.supabaseAccessToken])
 
   const classified = tasks.map((t) => ({ task: t, bucket: classifyTask(t, now) }))
 

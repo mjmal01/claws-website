@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useTransition } from 'react'
+import { useSession } from 'next-auth/react'
 import { createBrowserSupabaseClient } from '@/lib/supabase'
 import type { NewsPostWithAuthor } from '@/lib/supabase'
 import { createNewsPost, deleteNewsPost } from '@/app/actions/news'
@@ -13,6 +14,7 @@ interface Props {
 }
 
 export default function NewsFeedClient({ initialPosts, isLeadership, currentUserId }: Props) {
+  const { data: session } = useSession()
   const [posts, setPosts] = useState<NewsPostWithAuthor[]>(initialPosts)
   const [showCompose, setShowCompose] = useState(false)
   const [isPending, startTransition] = useTransition()
@@ -22,7 +24,8 @@ export default function NewsFeedClient({ initialPosts, isLeadership, currentUser
 
   // Realtime subscription
   useEffect(() => {
-    const supabase = createBrowserSupabaseClient()
+    if (!session?.supabaseAccessToken) return
+    const supabase = createBrowserSupabaseClient(session.supabaseAccessToken)
     const channel = supabase
       .channel('news_posts_realtime')
       .on(
@@ -51,12 +54,12 @@ export default function NewsFeedClient({ initialPosts, isLeadership, currentUser
       .subscribe()
 
     return () => { supabase.removeChannel(channel) }
-  }, [])
+  }, [session?.supabaseAccessToken])
 
   async function handleImageUpload(file: File) {
     setUploadingImage(true)
     try {
-      const supabase = createBrowserSupabaseClient()
+      const supabase = createBrowserSupabaseClient(session?.supabaseAccessToken)
       const ext = file.name.split('.').pop()
       const path = `${Date.now()}.${ext}`
       const { error: uploadError } = await supabase.storage

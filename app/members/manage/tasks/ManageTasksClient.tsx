@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useTransition, useEffect } from 'react'
+import { useSession } from 'next-auth/react'
 import type { TaskWithAssigner, Member, Subteam } from '@/lib/supabase'
 import { createTask, deleteTask } from '@/app/actions/tasks'
 import { createBrowserSupabaseClient } from '@/lib/supabase'
@@ -21,6 +22,7 @@ interface Props {
 }
 
 export default function ManageTasksClient({ initialTasks, members, subteams, isLeadership, userSubteam }: Props) {
+  const { data: session } = useSession()
   const [tasks, setTasks] = useState<TaskWithAssigner[]>(initialTasks)
   const [filter, setFilter] = useState<Filter>('all')
   const [showCreate, setShowCreate] = useState(false)
@@ -33,7 +35,8 @@ export default function ManageTasksClient({ initialTasks, members, subteams, isL
 
   // Realtime
   useEffect(() => {
-    const supabase = createBrowserSupabaseClient()
+    if (!session?.supabaseAccessToken) return
+    const supabase = createBrowserSupabaseClient(session.supabaseAccessToken)
     const channel = supabase
       .channel('manage_tasks_realtime')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'tasks' }, async (payload) => {
@@ -53,7 +56,7 @@ export default function ManageTasksClient({ initialTasks, members, subteams, isL
       })
       .subscribe()
     return () => { supabase.removeChannel(channel) }
-  }, [])
+  }, [session?.supabaseAccessToken])
 
   async function handleCreate(formData: FormData) {
     setCreateError('')
@@ -61,16 +64,16 @@ export default function ManageTasksClient({ initialTasks, members, subteams, isL
       try {
         const result = await createTask(formData)
         // Upload attachment if any
-        if (attachmentFile && result.taskId) {
+        if (attachmentFile && result.taskId && session?.user.id) {
           setUploading(true)
-          const supabase = createBrowserSupabaseClient()
+          const supabase = createBrowserSupabaseClient(session.supabaseAccessToken)
           const path = `tasks/${result.taskId}/${Date.now()}_${attachmentFile.name}`
           const { data: uploadData } = await supabase.storage.from('attachments').upload(path, attachmentFile)
           if (uploadData) {
             const { data: urlData } = supabase.storage.from('attachments').getPublicUrl(path)
             await supabase.from('task_attachments').insert({
               task_id: result.taskId,
-              member_id: (await supabase.auth.getUser()).data.user?.id,
+              member_id: session.user.id,
               file_name: attachmentFile.name,
               file_url: urlData.publicUrl,
               file_size: attachmentFile.size,
