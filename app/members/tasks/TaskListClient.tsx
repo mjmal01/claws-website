@@ -53,6 +53,12 @@ export default function TaskListClient({ tasks: initialTasks }: Props) {
         'postgres_changes',
         { event: 'INSERT', schema: 'public', table: 'tasks' },
         async (payload) => {
+          // Known gap: attachments.file_url here is the raw storage path
+          // (attachments is a private bucket), not a signed URL — signing
+          // needs the service-role client, which the browser doesn't have.
+          // A task with an attachment picked up live won't have a working
+          // download link until the next full page load re-fetches it
+          // through getMemberTasksWithDetails().
           const { data } = await supabase
             .from('tasks')
             .select(`*, assigner:members!tasks_assigned_by_fkey(id, name), attachments:task_attachments(*)`)

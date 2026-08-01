@@ -388,6 +388,21 @@ export async function getNewsPostsWithAuthors(limit = 50): Promise<NewsPostWithA
   }))
 }
 
+// The attachments storage bucket is private — file_url in the DB holds the
+// raw storage path, not a usable link. Sign it fresh here (service role,
+// bypasses RLS) since a stored signed URL would just expire. 1h is enough
+// for a page session; regenerated on every fetch, so no caching to bust.
+async function signAttachmentUrls(attachments: TaskAttachment[]): Promise<TaskAttachment[]> {
+  if (!attachments.length) return attachments
+  const supabase = await createServerSupabaseClient()
+  return Promise.all(
+    attachments.map(async (a) => {
+      const { data } = await supabase.storage.from('attachments').createSignedUrl(a.file_url, 3600)
+      return data ? { ...a, file_url: data.signedUrl } : a
+    })
+  )
+}
+
 export async function getMemberTasksWithDetails(memberId: string): Promise<TaskWithAssigner[]> {
   const supabase = await createServerSupabaseClient()
   const { data } = await supabase
@@ -400,11 +415,13 @@ export async function getMemberTasksWithDetails(memberId: string): Promise<TaskW
     .eq('member_id', memberId)
     .order('due_date', { ascending: true, nullsFirst: false })
   if (!data) return []
-  return data.map((row) => ({
-    ...(row as Task),
-    assigner: (row as { assigner: Pick<Member, 'id' | 'name'> | null }).assigner,
-    attachments: ((row as { attachments: TaskAttachment[] }).attachments) ?? [],
-  }))
+  return Promise.all(
+    data.map(async (row) => ({
+      ...(row as Task),
+      assigner: (row as { assigner: Pick<Member, 'id' | 'name'> | null }).assigner,
+      attachments: await signAttachmentUrls((row as { attachments: TaskAttachment[] }).attachments ?? []),
+    }))
+  )
 }
 
 export async function getAllTasksForManage(
@@ -431,12 +448,14 @@ export async function getAllTasksForManage(
   const { data } = await query
   if (!data) return []
 
-  return data.map((row) => ({
-    ...(row as Task),
-    assigner: (row as { assigner: Pick<Member, 'id' | 'name'> | null }).assigner,
-    assignee: (row as { assignee: Pick<Member, 'id' | 'name' | 'subteam'> | null }).assignee,
-    attachments: ((row as { attachments: TaskAttachment[] }).attachments) ?? [],
-  })) as TaskWithAssigner[]
+  return Promise.all(
+    data.map(async (row) => ({
+      ...(row as Task),
+      assigner: (row as { assigner: Pick<Member, 'id' | 'name'> | null }).assigner,
+      assignee: (row as { assignee: Pick<Member, 'id' | 'name' | 'subteam'> | null }).assignee,
+      attachments: await signAttachmentUrls((row as { attachments: TaskAttachment[] }).attachments ?? []),
+    }))
+  ) as Promise<TaskWithAssigner[]>
 }
 
 export async function getTaskAttachments(taskId: string): Promise<TaskAttachment[]> {

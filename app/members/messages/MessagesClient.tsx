@@ -322,6 +322,11 @@ export function MessagesClient({
   // without tearing down/recreating realtime subscriptions.
   const tokenRef = useRef(session?.supabaseAccessToken ?? null)
   useEffect(() => { tokenRef.current = session?.supabaseAccessToken ?? null }, [session?.supabaseAccessToken])
+  // tokenRef is captured for later use by Supabase's SDK (which calls this
+  // getter on-demand for each request), never dereferenced synchronously
+  // here during render — see eslint.config.mjs for why react-hooks/refs is
+  // downgraded rather than inline-disabled (React Compiler diagnostics
+  // don't honor eslint-disable comments).
   const supabaseRef = useRef(createBrowserSupabaseClient(async () => tokenRef.current))
 
   // Request browser notification permission once on mount

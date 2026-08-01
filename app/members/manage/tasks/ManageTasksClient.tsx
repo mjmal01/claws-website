@@ -43,6 +43,10 @@ export default function ManageTasksClient({ initialTasks, members, subteams, isL
         if (payload.eventType === 'DELETE') {
           setTasks((prev) => prev.filter((t) => t.id !== (payload.old as { id: string }).id))
         } else if (payload.eventType === 'INSERT') {
+          // Known gap: attachments.file_url here is the raw storage path
+          // (attachments is a private bucket) — signing needs the
+          // service-role client, which the browser doesn't have. Fresh on
+          // the next full page load via getAllTasksForManage().
           const { data } = await supabase
             .from('tasks')
             .select(`*, assigner:members!tasks_assigned_by_fkey(id, name), assignee:members!tasks_member_id_fkey(id, name, subteam), attachments:task_attachments(*)`)
@@ -70,12 +74,15 @@ export default function ManageTasksClient({ initialTasks, members, subteams, isL
           const path = `tasks/${result.taskId}/${Date.now()}_${attachmentFile.name}`
           const { data: uploadData } = await supabase.storage.from('attachments').upload(path, attachmentFile)
           if (uploadData) {
-            const { data: urlData } = supabase.storage.from('attachments').getPublicUrl(path)
+            // attachments is a private bucket — store the raw storage path,
+            // not a public URL (getPublicUrl() would return a link that
+            // 403s). Read paths sign it fresh via lib/supabase.ts's
+            // signAttachmentUrls() before it ever reaches the client.
             await supabase.from('task_attachments').insert({
               task_id: result.taskId,
               member_id: session.user.id,
               file_name: attachmentFile.name,
-              file_url: urlData.publicUrl,
+              file_url: path,
               file_size: attachmentFile.size,
               mime_type: attachmentFile.type,
             })
