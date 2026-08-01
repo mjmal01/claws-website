@@ -1,0 +1,7 @@
+{
+  "projectId": "0a4e2cd9-066a-44ff-9de5-fc11d59cde00",
+  "shape": "package",
+  "componentSrcMap": {
+    "include": ["components/ui/**/*.tsx"]
+  }
+}
